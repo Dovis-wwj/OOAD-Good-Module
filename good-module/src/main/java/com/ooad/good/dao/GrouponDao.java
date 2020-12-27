@@ -10,6 +10,8 @@ import com.github.pagehelper.PageInfo;
 import com.ooad.good.mapper.GrouponActivityPoMapper;
 import com.ooad.good.model.bo.ActivityStatus;
 import com.ooad.good.model.bo.Groupon;
+import com.ooad.good.model.bo.Shop;
+import com.ooad.good.model.bo.Spu;
 import com.ooad.good.model.po.GrouponActivityPo;
 import com.ooad.good.model.po.GrouponActivityPoExample;
 import com.ooad.good.model.vo.groupon.GrouponVo;
@@ -34,7 +36,7 @@ public class GrouponDao {
 
 
  
-    public ReturnObject<NewGroupon> createGrouponofSPU(Long shopId, Long id, GrouponVo grouponVo, GoodsSpuPoDTO goodsSpuPoDTO, SimpleShopDTO simpleShopDTO) {
+    public ReturnObject<Groupon> createGrouponofSPU(Long shopId, Long id, GrouponVo grouponVo, Spu spu, Shop shop) {
 
 
         //1. 此spu是否正在参加其他团购
@@ -58,8 +60,8 @@ public class GrouponDao {
             logger.error(message.toString());
             return new ReturnObject<>(ResponseCode.INTERNAL_SERVER_ERR);
         }
-        NewGroupon newGrouponActivity = new NewGroupon(grouponActivityPo,goodsSpuPoDTO,simpleShopDTO);
-        return new ReturnObject<>(newGrouponActivity);
+        Groupon newGroupon = new Groupon(grouponActivityPo);
+        return new ReturnObject<>(newGroupon);
 
 
     }
@@ -168,14 +170,16 @@ public class GrouponDao {
             logger.error(message.toString());
             return new ReturnObject<>(ResponseCode.INTERNAL_SERVER_ERR);
         }
-        if(oldPo == null)
+        if(oldPo == null) {
+            logger.info("groupon activity not exist");
             return new ReturnObject<>(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
 
         //2.若shopId不一致，则无权限访问
-        if(oldPo.getShopId()!= shopId)
+        if(oldPo.getShopId()!= shopId) {
+            logger.info("no rights");
             return new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE);
-
+        }
         //3.若状态不为下线，则团购活动禁止
         if(oldPo.getState()!=ActivityStatus.OFF_SHELVES.getCode().byteValue())
             return new ReturnObject<>(ResponseCode.GROUPON_STATENOTALLOW);
@@ -200,7 +204,6 @@ public class GrouponDao {
     }
 
     public ReturnObject cancelGrouponofSPU(Long shopId, Long id) {
-
         //1.查询此groupon
         GrouponActivityPo oldPo = null;
         try {

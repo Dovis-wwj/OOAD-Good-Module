@@ -9,10 +9,13 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 
 import com.ooad.good.mapper.BrandPoMapper;
+import com.ooad.good.mapper.SpuPoMapper;
 import com.ooad.good.model.bo.Brand;
 import com.ooad.good.model.po.BrandPo;
 import com.ooad.good.model.po.BrandPoExample;
 
+import com.ooad.good.model.po.SpuPo;
+import com.ooad.good.model.po.SpuPoExample;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,6 +33,8 @@ public class BrandDao {
 
     @Autowired
     private BrandPoMapper brandMapper;
+    @Autowired
+    private SpuPoMapper spuPoMapper;
 
     /**
      * 获得所有品牌
@@ -80,10 +85,21 @@ public class BrandDao {
         ReturnObject<Object> retObj = null;
         BrandPoExample brandPo = new BrandPoExample();
         BrandPoExample.Criteria criteria = brandPo.createCriteria();
-
         criteria.andIdEqualTo(id);
 
+        SpuPoExample spuExample=new SpuPoExample();
+        SpuPoExample.Criteria criteria1=spuExample.createCriteria();
+        criteria1.andBrandIdEqualTo(id);
+        List<SpuPo>spuPoList;
+
         try {
+            spuPoList=spuPoMapper.selectByExample(spuExample);
+            for(SpuPo po:spuPoList)
+            {
+                po.setBrandId((long)0);
+                spuPoMapper.updateByPrimaryKeySelective(po);
+            }
+
             int ret = brandMapper.deleteByExample(brandPo);
             if (ret == 0) {
                 //删除角色表
@@ -119,7 +135,19 @@ public class BrandDao {
     public ReturnObject<Brand> insertBrand(Brand brand) {
         BrandPo brandPo = brand.gotBrandPo();
         ReturnObject<Brand> retObj = null;
+
+        BrandPoExample example=new BrandPoExample();
+        BrandPoExample.Criteria criteria = example.createCriteria();
+        criteria.andNameEqualTo(brand.getName());
+        List<BrandPo> pos=null;
         try {
+            pos=brandMapper.selectByExample(example);
+            if(pos!=null&&pos.size()!=0)
+            {
+                logger.debug("Brand Name Same");
+                return new ReturnObject<>(ResponseCode.BRAND_NAME_SAME);
+            }
+
             int ret = brandMapper.insertSelective(brandPo);
             if (ret == 0) {
                 //插入失败
@@ -160,7 +188,22 @@ public class BrandDao {
         BrandPoExample brandPoExample=new BrandPoExample();
         BrandPoExample.Criteria criteria= brandPoExample.createCriteria();
         criteria.andIdEqualTo(brand.getId());
+
+        BrandPoExample example1=new BrandPoExample();
+        BrandPoExample.Criteria criteria1 = example1.createCriteria();
+        criteria1.andNameEqualTo(brand.getName());
+        List<BrandPo> pos=null;
         try{
+            pos=brandMapper.selectByExample(example1);
+            if(pos!=null&&pos.size()!=0)
+            {
+                if(brand.getId()!=pos.get(0).getId())
+                {
+                logger.info("Brand Name Same");
+                return new ReturnObject<>(ResponseCode.BRAND_NAME_SAME);
+            }
+
+            }
             int ret = brandMapper.updateByExampleSelective(brandPo, brandPoExample);
             if (ret == 0) {
                 //修改失败

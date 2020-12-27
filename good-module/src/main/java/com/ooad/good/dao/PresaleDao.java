@@ -9,6 +9,8 @@ import cn.edu.xmu.oomall.goods.model.SimpleShopDTO;
 import com.ooad.good.mapper.PresaleActivityPoMapper;
 import com.ooad.good.model.bo.ActivityStatus;
 import com.ooad.good.model.bo.Presale;
+import com.ooad.good.model.bo.Shop;
+import com.ooad.good.model.bo.Sku;
 import com.ooad.good.model.po.PresaleActivityPo;
 import com.ooad.good.model.po.PresaleActivityPoExample;
 import com.ooad.good.model.vo.presale.PresaleVo;
@@ -121,14 +123,12 @@ public class PresaleDao {
      * @param shopId
      * @param id
      * @param presaleVo
-     * @param simpleGoodsSkuDTO
-     * @param simpleShopDTO
      * @return
      */
     public ReturnObject addSkuPresale(Long shopId, Long id,
                                            PresaleVo presaleVo,
-                                           SimpleGoodsSkuDTO simpleGoodsSkuDTO,
-                                           SimpleShopDTO simpleShopDTO) {
+                                           Sku sku,
+                                           Shop shop) {
 
 
         //1. 此sku是否正在参加其他预售
@@ -155,7 +155,7 @@ public class PresaleDao {
             logger.error(message.toString());
             return new ReturnObject<>(ResponseCode.INTERNAL_SERVER_ERR);
         }
-        Presale presale = new Presale(presaleActivityPo,simpleGoodsSkuDTO,simpleShopDTO);
+        Presale presale = new Presale(presaleActivityPo,sku,shop);
         return new ReturnObject<>(presale);
     }
 

@@ -201,7 +201,7 @@ public class CommentDao {
             else {
                 Byte newState;
                 if(commentPo.getState() != 0){
-                    return new ReturnObject<>(ResponseCode.COMMENT_AUDITED);//该评论已经审核过了
+                    return new ReturnObject<>(ResponseCode.COMMENT_EXISTED);//该评论已经审核过了
                 }
                 if(conclusion) {//通过审核
                     newState = 2;
@@ -266,7 +266,6 @@ public class CommentDao {
     public ReturnObject<PageInfo<VoObject>> showUnAuditComments(Integer comment_state, Integer pageNum, Integer pageSize) {
         CommentPoExample example = new CommentPoExample();
         CommentPoExample.Criteria criteria = example.createCriteria();
-        //增加state=0或者1或者2的查询
         Byte state = comment_state.byteValue();
         criteria.andStateEqualTo(state);
         //分页查询
