@@ -6,15 +6,23 @@ import lombok.Data;
 @Data
 public class SkuRetVo {
     private Long id;
-    private String skuSn;
     private String name;
-    private Long originalPrice;
+    private String skuSn;
     private String imageUrl;
     private Integer inventory;
-    private Byte disabled;
-    private Long price;//在哪？？？？
+    private Long originalPrice;
+    private Long price;
+    private Boolean disable;
+
 
     public SkuRetVo(Sku sku){
+
+        Boolean dis;
+        if (sku.getDisabled()==null)
+            dis=false;
+        else if(sku.getDisabled()==(byte)0)
+            dis=false;
+        else dis=true;
 
         this.id=sku.getId();
         this.skuSn=sku.getSkuSn();
@@ -22,7 +30,7 @@ public class SkuRetVo {
         this.originalPrice=sku.getOriginalPrice();
         this.imageUrl=sku.getImageUrl();
         this.inventory=sku.getInventory();
-        this.disabled=sku.getDisabled();
-
+        this.disable=dis;
+        this.price=sku.getPrice();
     }
 }

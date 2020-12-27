@@ -1,13 +1,15 @@
 package com.ooad.good.model.bo;
 
+import cn.edu.xmu.ooad.model.VoObject;
 import com.ooad.good.model.po.SpuPo;
+import com.ooad.good.model.vo.spu.SpuRetVo;
 import com.ooad.good.model.vo.spu.SpuVo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-public class Spu {
+public class Spu implements VoObject {
 
     private Long id;
     private String name;
@@ -85,5 +87,15 @@ public class Spu {
         po.setDisabled(this.getDisabled());
         po.setSpec(this.getSpec());
         return po;
+    }
+
+    @Override
+    public Object createVo() {
+        return new SpuRetVo(this);
+    }
+
+    @Override
+    public Object createSimpleVo() {
+        return null;
     }
 }

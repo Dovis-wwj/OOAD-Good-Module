@@ -8,10 +8,62 @@ import com.ooad.good.model.vo.shop.ShopVo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 
 @Data
 public class Shop implements VoObject {
+
+
+	/**
+	 * 请求类型
+	 */
+	//默认0为未审核状态，1为未上线状态，2为上线状态,3为审核未通过状态，4为逻辑删除
+	public enum StateType {
+
+		UNCHECK(0, "未审核"),
+		OFFLINE(1, "未上线"),
+		ONLINE(2, "上线"),
+		CLOSED(3,"关闭"),
+		NOTPASS(4, "审核未通过");
+
+		private static final Map<Integer, StateType> typeMap;
+
+		static { //由类加载机制，静态块初始加载对应的枚举属性到map中，而不用每次取属性时，遍历一次所有枚举值
+			typeMap = new HashMap();
+			for (StateType enum1 : values()) {
+				typeMap.put(enum1.code, enum1);
+			}
+		}
+
+		private int code;
+		private String description;
+
+		StateType(int code, String description) {
+			this.code = code;
+			this.description = description;
+		}
+
+
+		public static StateType getTypeByCode(Integer code) {
+			return typeMap.get(code);
+		}
+
+		public Integer getCode() {
+			return code;
+		}
+
+		public String getDescription() {
+			return description;
+		}
+
+		public void setCode(Byte state)
+		{
+			this.code=state;
+		}
+	}
+
 	private Long id;
 	private String name;
 	private Byte state;
@@ -64,7 +116,13 @@ public class Shop implements VoObject {
 
 	@Override
 	public Object createVo() {
-		return new ShopRetVo(this);
+		ShopRetVo shopRetVo = new ShopRetVo();
+		shopRetVo.setId(this.id);
+		shopRetVo.setName(this.name);
+		shopRetVo.setState(this.state);
+		shopRetVo.setGmtCreate(this.gmtCreate.toString());
+		shopRetVo.setGmtModified(this.gmtModified.toString());
+		return shopRetVo;
 	}
 
 	@Override

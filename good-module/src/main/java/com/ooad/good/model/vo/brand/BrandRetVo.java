@@ -19,7 +19,7 @@ public class BrandRetVo {
 
     private String imageUrl;
 
-    private LocalDateTime gmtCreated;
+    private LocalDateTime gmtCreate;
 
     private LocalDateTime gmtModified;
 
@@ -32,7 +32,7 @@ public class BrandRetVo {
         this.name=brand.getName();
         this.detail=brand.getDetail();
         this.imageUrl=brand.getImageUrl();
-        this.gmtCreated=brand.getGmtCreate();
+        this.gmtCreate=brand.getGmtCreate();
         this.gmtModified=brand.getGmtModified();
     }
 }

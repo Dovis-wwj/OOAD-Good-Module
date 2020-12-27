@@ -13,8 +13,8 @@ import java.time.LocalDateTime;
 public class SkuVo {
 
 
-    @NotNull(message = "skuSn不能为空")
-    private String skuSn;
+    @NotNull(message = "sn不能为空")
+    private String sn;
 
     @NotNull(message = "sku名不能为空")
     private String name;
@@ -44,7 +44,7 @@ public class SkuVo {
     public Sku createSku(){
         Sku sku=new Sku();
 
-        sku.setSkuSn(this.skuSn);
+        sku.setSkuSn(this.sn);
         sku.setName(this.name);
         sku.setOriginalPrice(this.originalPrice);
         sku.setConfiguration(this.configuration);

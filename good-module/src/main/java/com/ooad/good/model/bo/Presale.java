@@ -85,6 +85,23 @@ public class Presale implements VoObject {
         this.simpleShopDTO = simpleShopDTO;
 
     }
+    public Presale(PresaleActivityPo po,Sku sku,Shop shop){
+
+        this.id=po.getId();
+        this.name=po.getName();
+        this.beginTime=po.getBeginTime();
+        this.payTime=po.getPayTime();
+        this.endTime=po.getEndTime();
+        this.state=po.getState();
+        this.shopId=po.getShopId();
+        this.goodsSkuId=po.getGoodsSkuId();
+        this.quantity=po.getQuantity();
+        this.advancePayPrice=po.getAdvancePayPrice();
+        this.restPayPrice=po.getRestPayPrice();
+        this.gmtCreate=po.getGmtCreate();
+        this.gmtModified=po.getGmtModified();
+
+    }
     @Override
     public Object createSimpleVo() {
         return null;

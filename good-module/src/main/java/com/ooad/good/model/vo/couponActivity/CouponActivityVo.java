@@ -53,4 +53,5 @@ public class CouponActivityVo {
         couponActivity.setValidTerm(this.validTerm);
         return couponActivity;
     }
+
 }

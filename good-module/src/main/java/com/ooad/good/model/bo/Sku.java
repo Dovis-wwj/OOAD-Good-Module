@@ -1,18 +1,67 @@
 package com.ooad.good.model.bo;
 
+import cn.edu.xmu.ooad.model.VoObject;
 import com.ooad.good.model.po.SkuPo;
+import com.ooad.good.model.vo.sku.SkuRetVo;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Data
-public class Sku {
+public class Sku implements VoObject {
+    @Override
+    public Object createVo() {
+        return new SkuRetVo(this);
+    }
+
+    @Override
+    public Object createSimpleVo() {
+        return new SkuRetVo(this);
+    }
+
+    public enum State {
+        OFFSHELF(0,"未上架"),
+        ONSHELF(4,"上架"),
+        DELETED(6,"已删除");
+
+        private static final Map<Integer, State> stateMap;
+
+        static { //由类加载机制，静态块初始加载对应的枚举属性到map中，而不用每次取属性时，遍历一次所有枚举值
+            stateMap = new HashMap();
+            for (State enum1 : values()) {
+                stateMap.put(enum1.code, enum1);
+            }
+        }
+
+        private int code;
+        private String description;
+
+        State(int code, String description) {
+            this.code = code;
+            this.description = description;
+        }
+
+        public static Sku.State getTypeByCode(Integer code) {
+            return stateMap.get(code);
+        }
+
+        public Integer getCode() {
+            return code;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
 
     private Long id;
     private Long goodsSpuId;
     private String skuSn;
     private String name;
     private Long originalPrice;
+    private Long price;
     private String configuration;
     private Long weight;
     private String imageUrl;

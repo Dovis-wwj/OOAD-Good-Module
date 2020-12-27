@@ -55,7 +55,7 @@ public class Comment implements VoObject {
 
         static { //由类加载机制，静态块初始加载对应的枚举属性到map中，而不用每次取属性时，遍历一次所有枚举值
             stateMap = new HashMap();
-            for (Comment.State enum1 : values()) {
+            for (State enum1 : values()) {
                 stateMap.put(enum1.code, enum1);
             }
         }
@@ -68,7 +68,7 @@ public class Comment implements VoObject {
             this.description = description;
         }
 
-        public static Comment.State getTypeByCode(Integer code) {
+        public static State getTypeByCode(Integer code) {
             return stateMap.get(code);
         }
 
@@ -87,11 +87,11 @@ public class Comment implements VoObject {
         MEDIUM(1, "中评"),
         BAD(2, "差评");
 
-        private static final Map<Integer, Comment.Type> stateMap;
+        private static final Map<Integer, Type> stateMap;
 
         static { //由类加载机制，静态块初始加载对应的枚举属性到map中，而不用每次取属性时，遍历一次所有枚举值
             stateMap = new HashMap();
-            for (Comment.Type enum1 : values()) {
+            for (Type enum1 : values()) {
                 stateMap.put(enum1.code, enum1);
             }
         }
@@ -104,7 +104,7 @@ public class Comment implements VoObject {
             this.description = description;
         }
 
-        public static Comment.Type getTypeByCode(Integer code) {
+        public static Type getTypeByCode(Integer code) {
             return stateMap.get(code);
         }
 
