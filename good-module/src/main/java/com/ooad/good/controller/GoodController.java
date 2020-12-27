@@ -1,16 +1,20 @@
 package com.ooad.good.controller;
 
 import cn.edu.xmu.ooad.annotation.Audit;
+import cn.edu.xmu.ooad.annotation.Depart;
+import cn.edu.xmu.ooad.annotation.LoginUser;
 import cn.edu.xmu.ooad.model.VoObject;
 import cn.edu.xmu.ooad.util.Common;
+import cn.edu.xmu.ooad.util.ResponseCode;
+import cn.edu.xmu.ooad.util.ResponseUtil;
 import cn.edu.xmu.ooad.util.ReturnObject;
 import com.github.pagehelper.PageInfo;
-import com.ooad.good.model.bo.Brand;
-import com.ooad.good.model.bo.Category;
-import com.ooad.good.model.bo.Sku;
-import com.ooad.good.model.bo.Spu;
+import com.ooad.good.model.bo.*;
 import com.ooad.good.model.vo.brand.BrandVo;
 import com.ooad.good.model.vo.category.CategoryVo;
+import com.ooad.good.model.vo.floatPrice.FloatPriceVo;
+import com.ooad.good.model.vo.shop.ShopStateVo;
+import com.ooad.good.model.vo.sku.SkuStateVo;
 import com.ooad.good.model.vo.sku.SkuVo;
 import com.ooad.good.model.vo.spu.SpuVo;
 import com.ooad.good.service.BrandService;
@@ -18,7 +22,8 @@ import com.ooad.good.service.BrandService;
 import com.ooad.good.service.CategoryService;
 import com.ooad.good.service.SkuService;
 import com.ooad.good.service.SpuService;
-import io.swagger.annotations.Api;
+import io.swagger.annotations.*;
+import org.apache.http.impl.client.RequestWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,9 +31,12 @@ import org.springframework.http.HttpStatus;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import springfox.documentation.annotations.ApiIgnore;
 
 import javax.servlet.http.HttpServletResponse;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Api(value="商品服务",tags="goods")
 @RestController
@@ -40,6 +48,7 @@ public class GoodController {
     private HttpServletResponse httpServletResponse;
     @Autowired
     BrandService brandService;
+
 
     /**
      * 获得所有品牌
@@ -63,7 +72,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @DeleteMapping("/brands/{id}")
+    @DeleteMapping("/shops/{shopId}/brands/{id}")
     public Object deleteBrand(@PathVariable("id")Long id){
         logger.debug("delete brand: id =" +id);
         ReturnObject returnObject=brandService.deleteBrand(id);
@@ -78,7 +87,7 @@ public class GoodController {
      */
 
     @Audit
-    @PostMapping("/brands")
+    @PostMapping("/shops/{id}/brands")
     public Object insertBrand(@RequestBody BrandVo vo, BindingResult bindingResult){
         //校验前端数据
         Object returnObject=Common.processFieldErrors(bindingResult,httpServletResponse);
@@ -86,16 +95,38 @@ public class GoodController {
             logger.debug("validate fail");
             return returnObject;
         }
+        if(vo.getName()==null||vo.getName().isBlank())
+        {
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID),httpServletResponse);
+        }
         Brand brand=vo.createBrand();
         brand.setGmtCreate(LocalDateTime.now());
         ReturnObject retObject=brandService.insertBrand(brand);
         if(retObject.getData()!=null){
+            logger.info("successful");
             httpServletResponse.setStatus(HttpStatus.CREATED.value());
             return Common.getRetObject(retObject);
         }
         else{
             return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
         }
+    }
+
+    /**
+     * 获得商品所有状态
+     * @return
+     */
+    @Audit
+    @GetMapping("/skus/states")
+    public Object getAllShopStates() {
+        logger.info("getAllSkuStates");
+        Sku.State [] state= Sku.State.class.getEnumConstants();
+        List<SkuStateVo> skuStateVos = new ArrayList<>();
+        for (int i = 0; i < state.length; i++) {
+            skuStateVos.add(new SkuStateVo(state[i]));
+        }
+        return ResponseUtil.ok(new ReturnObject<List>(skuStateVos).getData());
     }
 
     /**
@@ -107,14 +138,15 @@ public class GoodController {
      */
 
     @Audit
-    @PutMapping("brands/{id}")
+    @PutMapping("/shops/{shopId}/brands/{id}")
     public Object updateBrand(@PathVariable("id")Long id,@Validated @RequestBody BrandVo vo,BindingResult bindingResult){
         logger.debug("update brand id = " + id);
         //校验前端数据
-        Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
+      /*  Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
         if (null != returnObject) {
+            logger.info("error");
             return returnObject;
-        }
+        }*/
         Brand brand=vo.createBrand();
         brand.setId(id);
         brand.setGmtModified(LocalDateTime.now());
@@ -132,12 +164,59 @@ public class GoodController {
     private CategoryService categoryService;
 
     /**
+     *查询商品分类关系
+     * @param id
+     * @return
+     */
+    @Audit
+    @GetMapping("/categories/{id}/subcategories")
+    public Object getCategories(@PathVariable Long id){
+        ReturnObject returnObject =  categoryService.getCategories(id);
+        return  Common.decorateReturnObject(returnObject);
+    }
+    /**
+     * 管理员新增商品类目
+     * @param vo
+     * @param bindingResult
+     * @param userId
+     * @param departId
+     * @param id
+     * @return
+     */
+    @Audit
+    @PostMapping("/shops/{shopId}/categories/{id}/subcategories")
+    public Object insertCategory(@Validated @RequestBody CategoryVo vo, BindingResult bindingResult,
+                                 @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                                 @Depart @ApiIgnore @RequestParam(required = false) Long departId,
+                                 @PathVariable Long id) {
+        logger.debug("insert category by userId:" + userId);
+        //校验前端数据
+        Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
+        if (null != returnObject) {
+            logger.debug("validate fail");
+            return returnObject;
+        }
+        Category category = vo.createCategory();
+        category.setGmtCreate(LocalDateTime.now());
+        if(vo.getName()==null||vo.getName().isBlank()){
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID),httpServletResponse);
+        }
+        ReturnObject retObject = categoryService.insertGoodsCategory(category,id);
+        if (retObject.getData() != null) {
+            httpServletResponse.setStatus(HttpStatus.CREATED.value());
+            return Common.decorateReturnObject(retObject);
+        } else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+    }
+    /**
      * 管理员删除商品类目
      * @param id
      * @return
      */
     @Audit
-    @DeleteMapping("/categories/{id}")
+    @DeleteMapping("/shops/{shopId}/categories/{id}")
     public Object deleteCategory(@PathVariable("id")Long id){
         logger.debug("delete Category: id = "+id);
         ReturnObject returnObject=categoryService.deleteCategory(id);
@@ -150,7 +229,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PutMapping("/categories/{id}")
+    @PutMapping("/shops/{shopId}/categories/{id}")
     public  Object updateCategory(@PathVariable("id")Long id, @Validated @RequestBody CategoryVo vo,BindingResult bindingResult){
         logger.debug("update Category: id = "+id);
         //校验前端数据
@@ -171,6 +250,7 @@ public class GoodController {
     }
 
 
+
     @Autowired
     private SpuService spuService;
 
@@ -181,7 +261,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PostMapping("/spus")
+    @PostMapping("/shops/{id}/spus")
     public Object insertSpu(@Validated @RequestBody SpuVo vo,BindingResult bindingResult){
         //校验前端数据
         Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
@@ -209,7 +289,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PutMapping("/spus/{id}")
+    @PutMapping("/shops/{shopId}/spus/{id}")
     Object updateSpu(@PathVariable("id")Long id,@Validated @RequestBody SpuVo vo,BindingResult bindingResult ){
         logger.debug("update spu: id = "+id);
 
@@ -238,7 +318,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PostMapping("/spus/{spuId}/brands/{id}")
+    @PostMapping("/shops/{shopId}/spus/{spuId}/brands/{id}")
     Object insertSpuToBrand(@PathVariable("spuId")Long spuId,
                             @PathVariable("id")Long brandId){
 
@@ -248,13 +328,13 @@ public class GoodController {
     }
 
     /**
-     * 将sku移出品牌
+     * 将spu移出品牌
      * @param spuId
      * @param brandId
      * @return
      */
     @Audit
-    @DeleteMapping("/spus/{spuId}/brands/{id}")
+    @DeleteMapping("/shops/{shopId}/spus/{spuId}/brands/{id}")
     Object removeSpuFromBrand(@PathVariable("spuId")Long spuId,
                               @PathVariable("id")Long brandId){
 
@@ -270,7 +350,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PostMapping("/spus/{spuId}/categories/{id}")
+    @PostMapping("/shops/{shopId}/spus/{spuId}/categories/{id}")
     Object insertSpuToCategory(@PathVariable("spuId")Long spuId,
                             @PathVariable("id")Long categoryId){
 
@@ -285,7 +365,7 @@ public class GoodController {
      * @return
      */
     @Audit
-    @DeleteMapping("/spus/{spuId}/categories/{id}")
+    @DeleteMapping("/shops/{shopId}/spus/{spuId}/categories/{id}")
     Object removeSpuFromCategory(@PathVariable("spuId")Long spuId,
                               @PathVariable("id")Long categoryId){
 
@@ -308,25 +388,32 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PostMapping("/spus/{id}/skus")
-    public Object insertSku(@PathVariable("id")Long id, @Validated @RequestBody SkuVo vo,BindingResult bindingResult){
+    @PostMapping("/shops/{shopId}/spus/{id}/skus")
+    public Object insertSku(@PathVariable("shopId")Long shopId,@PathVariable("id")Long id,
+                            @Validated @RequestBody SkuVo vo,BindingResult bindingResult){
 
         logger.debug("insert sku: spuId = "+id);
 
         //校验前端数据
-        Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
+       /* Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
         if (null != returnObject) {
-            logger.debug("validate fail");
+            logger.info("validate fail");
             return returnObject;
-        }
+        }*/
 
         Sku sku=vo.createSku();
         sku.setGmtCreate(LocalDateTime.now());
         sku.setGoodsSpuId(id);//spuId设为url传入的id
-        ReturnObject retObject = skuService.insertSku(sku);
+        ReturnObject retObject = skuService.insertSku(shopId,sku);
         if (retObject.getData() != null) {
+            httpServletResponse.setStatus(HttpStatus.CREATED.value());
             return Common.getRetObject(retObject);
-        } else {
+        } if(retObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }
+        else {
             return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
         }
     }
@@ -338,13 +425,29 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PutMapping("skus/{id}/onshelves")
-    public Object onlinePresale(@PathVariable("id")Long id){
+    @PutMapping("/shops/{shopId}/skus/{id}/onshelves")
+    @ResponseBody
+    public Object onlineSku(@PathVariable Long shopId,@PathVariable Long id,
+                                @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                                @Depart @ApiIgnore @RequestParam(required = false) Long departId){
 
         logger.debug("onlineSku: id ="+id);
 
-        ReturnObject retObject=skuService.onlineSku(id);
-        return Common.getRetObject(retObject);
+        //校验权限
+//        if(departId!=0&&shopId!=departId)
+  //          return  Common.getNullRetObj(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE), httpServletResponse);
+        ReturnObject retObject = skuService.putGoodsOnSale(shopId,id);
+        if (retObject.getData() != null) {
+            return Common.decorateReturnObject(retObject);
+        }
+        else if(retObject.getCode()== ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+
 
     }
 
@@ -354,16 +457,212 @@ public class GoodController {
      * @return
      */
     @Audit
-    @PutMapping("skus/{id}/offshelves")
-    public Object offlinePresale(@PathVariable("id")Long id){
+    @PutMapping("/shops/{shopId}/skus/{id}/offshelves")
+    public Object offlineSku(@PathVariable Long shopId,@PathVariable Long id,
+                                 @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                                 @Depart @ApiIgnore @RequestParam(required = false) Long departId){
 
         logger.debug("offlineSku: id ="+id);
 
-        ReturnObject retObject=skuService.offlineSku(id);
-        return Common.getRetObject(retObject);
+        //校验是否为该商铺管理员
+//        if(departId!=0&&departId!=shopId)
+  //          return Common.getRetObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+        ReturnObject retObject = skuService.putOffGoodsOnSale(shopId,id);
+        if (retObject.getData() != null) {
+            return Common.decorateReturnObject(retObject);
+        }else if(retObject.getCode()== ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }
+        else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+
+    }
+    /**
+     * 管理员或店家修改SKU信息
+     * @param shopId
+     * @param id
+     * @param vo
+     * @return Object
+     */
+    @Audit
+    @PutMapping("/shops/{shopId}/skus/{id}")
+    public Object modifySKU(@PathVariable Long shopId,@PathVariable Long id,
+                            @Validated @RequestBody SkuVo vo,BindingResult bindingResult,
+                            @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                            @Depart @ApiIgnore @RequestParam(required = false) Long departId)
+    {
+        logger.debug("modifySKU: id = "+ id+" shopId="+shopId+" vo="+vo);
+       /* Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
+        if (null != returnObject) {
+            return returnObject;
+        }*/
+  //      if(departId!=0&&departId!=shopId)
+    //        return Common.getRetObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+        Sku sku=vo.createSku();
+        sku.setId(id);
+        ReturnObject retObject=skuService.modifySku(shopId,sku);
+        if (retObject.getData() != null) {
+            return Common.decorateReturnObject(retObject);
+        }if(retObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE)
+    {
+        httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+        return Common.getNullRetObj(retObject,httpServletResponse);
+    }
+        else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+    }
+
+    /**
+     *查询SKU
+     * @param shopId
+     * @param skuSn
+     * @param spuId
+     * @param spuSn
+     * @param page
+     * @param pageSize
+     * @return Object
+     */
+    @GetMapping("/skus")
+    @ResponseBody
+    public Object getSkuList(
+            @RequestParam(required = false)Long shopId,
+            @RequestParam(required = false)String skuSn,
+            @RequestParam(required = false)Long spuId,
+            @RequestParam(required = false)String spuSn,
+            @RequestParam(required = false, defaultValue = "1") Integer page,
+            @RequestParam(required = false, defaultValue = "10") Integer pageSize)
+    {
+        logger.debug("getSku:");
+        ReturnObject returnObject=skuService.getSkuList(shopId,skuSn,spuId,spuSn,page,pageSize);
+        return Common.getPageRetObject(returnObject);
+    }
+
+    /**
+     * 查询一条sku
+     * @param id
+     * @return
+     */
+    @Audit
+    @GetMapping("/skus/{id}")
+    @ResponseBody
+    public Object getSku(@PathVariable Long id )
+    {
+        logger.debug("getSku:id= "+id);
+        ReturnObject returnObject=skuService.getSku(id);
+        return Common.getRetObject(returnObject);
 
     }
 
+    /**
+     * 店家删除sku
+     * @param shopId
+     * @param id
+     * @param userId
+     * @param departId
+     * @return
+     */
+    @Audit
+    @DeleteMapping("/shops/{shopId}/skus/{id}")
+    public Object deleteSku(@PathVariable Long shopId, @PathVariable Long id,
+                            @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                            @Depart @ApiIgnore @RequestParam(required = false) Long departId)
+    {
+        logger.debug("deleteSku: Skuid = "+ id+" shopId="+shopId);
+        ReturnObject retObject=skuService.deleteSku(shopId,id);
+        if (retObject.getData() != null) {
+            return Common.decorateReturnObject(retObject);
+        } else if(retObject.getCode()== ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }
+        else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+    }
 
+    /**
+     * 新增价格浮动
+     * @param shopId
+     * @param id
+     * @param vo
+     * @param bindingResult
+     * @param userId
+     * @param departId
+     * @return
+     */
+    @Audit
+    @PostMapping("/shops/{shopId}/skus/{id}/floatPrices")
+    public Object addFloatPrice(@PathVariable Long shopId, @PathVariable Long id,
+                                     @Validated @RequestBody FloatPriceVo vo, BindingResult bindingResult,
+                                     @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                                     @Depart @ApiIgnore @RequestParam(required = false) Long departId)
+    {
+        //判断时间是否存在问题
+        if(vo.getBeginTime().isAfter(vo.getEndTime()))
+            return Common.getRetObject(new ReturnObject<>(ResponseCode.Log_Bigger));
+
+        Object returnObject = Common.processFieldErrors(bindingResult, httpServletResponse);
+        if (null != returnObject) {
+            logger.error("error");
+            return returnObject;
+        }
+        FloatPrice floatPrice=vo.createFloatPrice();
+        floatPrice.setGoodsSkuId(id);
+        floatPrice.setValid(FloatPrice.State.VALID);
+        floatPrice.setCreatedBy(userId);
+        floatPrice.setInvalidBy(userId);
+        ReturnObject retObject=skuService.addFloatPrice(shopId,floatPrice,userId);
+        if (retObject.getData() != null) {
+            httpServletResponse.setStatus(HttpStatus.CREATED.value());
+            return Common.decorateReturnObject(retObject);
+        } else if(retObject.getCode()== ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }
+        else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+    }
+    @Audit
+    @DeleteMapping("/shops/{shopId}/floatPrices/{id}")
+    public Object addFloatPrice(@PathVariable Long shopId, @PathVariable Long id,
+                                @LoginUser @ApiIgnore @RequestParam(required = false) Long userId,
+                                @Depart @ApiIgnore @RequestParam(required = false) Long departId)
+    {
+        ReturnObject retObject=skuService.deleteFloatPrice(shopId,id);
+        if (retObject.getData() != null) {
+            return Common.decorateReturnObject(retObject);
+        } else if(retObject.getCode()== ResponseCode.RESOURCE_ID_OUTSCOPE)
+        {
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(retObject,httpServletResponse);
+        }
+        else {
+            return Common.getNullRetObj(new ReturnObject<>(retObject.getCode(), retObject.getErrmsg()), httpServletResponse);
+        }
+    }
+
+
+    /**
+     * 查询一条spu
+     * @param id
+     * @return
+     */
+    @Audit
+    @GetMapping("/spus/{id}")
+    @ResponseBody
+    public Object getSpu(@PathVariable Long id )
+    {
+        logger.info("getSpu:id= "+id);
+        ReturnObject returnObject=spuService.getSpu(id);
+        return Common.getRetObject(returnObject);
+
+    }
 }
 

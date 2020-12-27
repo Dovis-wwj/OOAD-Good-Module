@@ -174,7 +174,11 @@ public class GrouponController {
             logger.debug("validate fail");
             return retObject;
         }
-
+        if(grouponVo.getBeginTime().isBefore(LocalDateTime.now())||grouponVo.getEndTime().isBefore((LocalDateTime.now())))
+        {
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID), httpServletResponse);
+        }
         //beginTime，endTime不能空
         if (grouponVo.getBeginTime() == null || grouponVo.getEndTime() == null) {
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
@@ -190,7 +194,11 @@ public class GrouponController {
         if (returnObject.getCode() == ResponseCode.OK) {
             httpServletResponse.setStatus(HttpStatus.CREATED.value());
             return Common.getRetObject(returnObject);
-        } else {
+        }
+        else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
+        }else {
             return Common.decorateReturnObject(returnObject);
         }
     }
@@ -216,7 +224,11 @@ public class GrouponController {
             logger.debug("validate fail");
             return ret;
         }
-
+        if(grouponVo.getBeginTime().isBefore(LocalDateTime.now())||grouponVo.getEndTime().isBefore((LocalDateTime.now())))
+        {
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID), httpServletResponse);
+        }
         //begintime<now
         if ((grouponVo.getBeginTime() != null) && (grouponVo.getBeginTime().isBefore(LocalDateTime.now())))
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
@@ -229,8 +241,8 @@ public class GrouponController {
                 && grouponVo.getEndTime().isBefore(grouponVo.getBeginTime()))
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
 
-        if (shopId != departId && departId != 0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+//        if (shopId != departId && departId != 0L)
+  //          return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
         Object retObject = Common.processFieldErrors(bindingResult, httpServletResponse);
         if (null != retObject) {
             logger.debug("validate fail");
@@ -248,6 +260,9 @@ public class GrouponController {
         ReturnObject returnObject = grouponService.modifyGrouponofSPU(shopId, id, grouponVo);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
+        }else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
         } else {
             return Common.decorateReturnObject(returnObject);
         }
@@ -266,13 +281,18 @@ public class GrouponController {
     @DeleteMapping("/shops/{shopId}/groupons/{id}")
     public Object cancelGrouponofSPU(@PathVariable Long shopId, @Depart Long departId, @PathVariable Long id) {
 
-        if (shopId != departId && departId != 0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+  //      if (shopId != departId && departId != 0L)
+    //        return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
 
         ReturnObject returnObject = grouponService.cancelGrouponofSPU(shopId, id);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
-        } else {
+        }else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            logger.info("out scope");
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
+        }
+        else {
             return Common.decorateReturnObject(returnObject);
         }
     }

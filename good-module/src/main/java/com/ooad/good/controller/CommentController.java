@@ -162,14 +162,12 @@ public class CommentController {
     @Audit // 需要认证
     @GetMapping("/shops/{id}/comments/all")
     public Object showUnAuditComments(@PathVariable("id") Long id,
-                                      
                                       @RequestParam(required = false, defaultValue = "2") Integer state,
                                       @RequestParam(required = false, defaultValue = "1") Integer page,
                                       @RequestParam(required = false, defaultValue = "10") Integer pageSize) {
 
+        logger.info("get all comments");
         return commentService.showUnAuditComments(state, page, pageSize);
     }
-
-
 
 }

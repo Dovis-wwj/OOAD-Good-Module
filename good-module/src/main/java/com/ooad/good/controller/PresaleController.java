@@ -139,22 +139,32 @@ public class PresaleController {
         //校验前端数据
         Object retObject = Common.processFieldErrors(bindingResult, httpServletResponse);
         if (null != retObject) {
-            logger.debug("validate fail");
-            return retObject;
+            logger.info("validate fail");
+            httpServletResponse.setStatus(HttpStatus.NOT_FOUND.value());
+            return Common.getNullRetObj(new ReturnObject<>(retObject), httpServletResponse);
         }
 
         //不能为空
         if(presaleVo.getEndTime()==null || presaleVo.getBeginTime()==null ||presaleVo.getPayTime() == null){
+            logger.info("can not be null");
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
+        }
+        if(presaleVo.getBeginTime().isBefore(LocalDateTime.now())||presaleVo.getEndTime().isBefore((LocalDateTime.now()))
+                ||presaleVo.getPayTime().isBefore(LocalDateTime.now()))
+        {
+            logger.info("time false");
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID), httpServletResponse);
         }
         //endtime<now,begin<now
-        if(presaleVo.getEndTime().isBefore(LocalDateTime.now())||presaleVo.getBeginTime().isBefore(LocalDateTime.now())){
-            return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
-        }
+       // if(presaleVo.getEndTime().isBefore(LocalDateTime.now())||presaleVo.getBeginTime().isBefore(LocalDateTime.now())){
+        //    return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
+        //}
         //begintime>endtime
         if(presaleVo.getEndTime().isBefore(LocalDateTime.now())||
                 presaleVo.getEndTime().isBefore(presaleVo.getPayTime())||
                 presaleVo.getPayTime().isBefore(presaleVo.getBeginTime())){
+            logger.info("time wrong");
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
         }
 
@@ -166,7 +176,12 @@ public class PresaleController {
         if (returnObject.getCode() == ResponseCode.OK) {
             httpServletResponse.setStatus(HttpStatus.CREATED.value());
             return Common.getRetObject(returnObject);
-        } else {
+        }
+        else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
+        }
+        else {
             return Common.decorateReturnObject(returnObject);
         }
     }
@@ -196,9 +211,16 @@ public class PresaleController {
         if(presaleVo.getBeginTime()!=null &&
                 presaleVo.getPayTime() != null &&
                 presaleVo.getPayTime().isBefore(presaleVo.getBeginTime())){
-            return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID), httpServletResponse);
         }
-
+        if(presaleVo.getBeginTime().isBefore(LocalDateTime.now())||presaleVo.getEndTime().isBefore((LocalDateTime.now()))
+                ||presaleVo.getPayTime().isBefore((LocalDateTime.now())))
+        {
+            logger.info("time wrong");
+            httpServletResponse.setStatus(HttpStatus.BAD_REQUEST.value());
+            return Common.getNullRetObj(new ReturnObject<>(ResponseCode.FIELD_NOTVALID), httpServletResponse);
+        }
         //paytime>endtime
         if(presaleVo.getEndTime()!=null && presaleVo.getPayTime() != null && presaleVo.getPayTime().isAfter(presaleVo.getEndTime())){
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
@@ -209,26 +231,17 @@ public class PresaleController {
             return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
         }
 
-        //endtime<now
-        if(presaleVo.getEndTime()!=null && presaleVo.getEndTime().isBefore(LocalDateTime.now())){
-            return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
-        }
-        //begintime<now
-        if(presaleVo.getBeginTime()!=null && presaleVo.getBeginTime().isBefore(LocalDateTime.now())){
-            return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
-        }
-        //paytime<now
-        if(presaleVo.getPayTime()!=null && presaleVo.getPayTime().isBefore(LocalDateTime.now())){
-            return Common.decorateReturnObject(new ReturnObject(ResponseCode.FIELD_NOTVALID));
-        }
-
-        if(shopId!=departId && departId!=0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+//        if(shopId!=departId && departId!=0L)
+  //          return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
 
         ReturnObject returnObject = presaleService.modifyPresaleOfSKU(shopId,id,presaleVo);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
-        } else {
+        } else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
+        }
+        else {
             return Common.decorateReturnObject(returnObject);
         }
     }
@@ -245,12 +258,15 @@ public class PresaleController {
     @Audit
     @DeleteMapping("/shops/{shopId}/presales/{id}")
     public Object cancelPresaleOfSKU(@PathVariable Long shopId, @Depart Long departId, @PathVariable Long id) {
-        if(shopId!=departId && departId!=0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+        //if(shopId!=departId && departId!=0L)
+          //  return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
         ReturnObject returnObject =  presaleService.cancelPresaleOfSKU(shopId, id);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
-        } else {
+        } else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
+        }else {
             return Common.decorateReturnObject(returnObject);
         }
     }
@@ -268,11 +284,14 @@ public class PresaleController {
     @ResponseBody
     @PutMapping("/shops/{shopId}/presales/{id}/onshelves")
     public Object putPresaleOnShelves(@PathVariable Long id, @Depart Long departId, @PathVariable Long shopId){
-        if(shopId!=departId && departId!=0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+//        if(shopId!=departId && departId!=0L)
+  //          return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
         ReturnObject returnObject = presaleService.putPresaleOnShelves(shopId,id);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
+        }else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
         } else {
             return Common.decorateReturnObject(returnObject);
         }
@@ -291,12 +310,15 @@ public class PresaleController {
     @PutMapping("/shops/{shopId}/presales/{id}/offshelves")
     public Object putPresaleOffShelves(@PathVariable Long id, @Depart Long departId, @PathVariable Long shopId){
 
-        if(shopId!=departId && departId!=0L)
-            return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
+//        if(shopId!=departId && departId!=0L)
+  //          return Common.decorateReturnObject(new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE));
 
         ReturnObject returnObject = presaleService.putPresaleOffShelves(shopId,id);
         if (returnObject.getCode() == ResponseCode.OK) {
             return Common.getRetObject(returnObject);
+        }else if(returnObject.getCode()==ResponseCode.RESOURCE_ID_OUTSCOPE){
+            httpServletResponse.setStatus(HttpStatus.FORBIDDEN.value());
+            return Common.getNullRetObj(returnObject, httpServletResponse);
         } else {
             return Common.decorateReturnObject(returnObject);
         }
