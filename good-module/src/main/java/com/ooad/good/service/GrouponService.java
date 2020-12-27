@@ -6,10 +6,14 @@ import cn.edu.xmu.ooad.util.ReturnObject;
 import cn.edu.xmu.oomall.goods.model.GoodsSpuPoDTO;
 import cn.edu.xmu.oomall.goods.model.SimpleShopDTO;
 import cn.edu.xmu.oomall.goods.service.IGoodsService;
+
 import cn.edu.xmu.oomall.order.service.IOrderService;
 import com.github.pagehelper.PageInfo;
 import com.ooad.good.dao.GrouponDao;
+import com.ooad.good.model.bo.Shop;
+import com.ooad.good.model.bo.Spu;
 import com.ooad.good.model.vo.groupon.GrouponVo;
+import com.ooad.good.service.impl.IGoodsServiceImpl;
 import org.apache.dubbo.config.annotation.DubboReference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,6 +28,12 @@ public class GrouponService {
 
     @Autowired
     GrouponDao grouponDao;
+    @Autowired
+    private SkuService skuService;
+    @Autowired
+    private ShopService shopService;
+    @Autowired
+    private SpuService spuService;
 
     @DubboReference(check = false)
     IGoodsService iGoodsService;
@@ -35,30 +45,34 @@ public class GrouponService {
 
     public ReturnObject modifyGrouponofSPU(Long shopId, Long id, GrouponVo grouponVo) {
         //1. shopId是否存在
-        SimpleShopDTO simpleShopDTO = iGoodsService.getSimpleShopByShopId(shopId).getData();
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         return grouponDao.modifyGrouponofSPU(shopId, id, grouponVo);
     }
 
     public ReturnObject createGrouponofSPU(Long shopId, Long id, GrouponVo grouponVo) {
 
         //1. shopId是否存在
-        SimpleShopDTO simpleShopDTO = iGoodsService.getSimpleShopByShopId(shopId).getData();
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         //2. 检查是否存在spuId
-        GoodsSpuPoDTO goodsSpuPoDTO = iGoodsService.getSpuBySpuId(id).getData();
-        if(goodsSpuPoDTO == null)
+        Spu spu = spuService.getSpuBySpuId(id).getData();
+        if(spu == null) {
+            logger.info("spu==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         //3.若shopId不一致，则无权限访问
-        if(goodsSpuPoDTO.getShopId()!= shopId)
+        if(spu.getShopId()!= shopId) {
+            logger.info("shop!=spu.shop");
             return new ReturnObject<>(ResponseCode.RESOURCE_ID_OUTSCOPE);
-
-        return grouponDao.createGrouponofSPU(shopId, id, grouponVo, goodsSpuPoDTO, simpleShopDTO);
+        }
+        return grouponDao.createGrouponofSPU(shopId, id, grouponVo, spu, shop);
 
     }
 
@@ -96,10 +110,11 @@ public class GrouponService {
 
     public ReturnObject cancelGrouponofSPU(Long shopId, Long id) {
         //1. shopId是否存在
-        SimpleShopDTO simpleShopDTO = iGoodsService.getSimpleShopByShopId(shopId).getData();
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         //2. 调用dao
         ReturnObject retobj = grouponDao.cancelGrouponofSPU(shopId,id);
         if(retobj.getCode()!=ResponseCode.OK)

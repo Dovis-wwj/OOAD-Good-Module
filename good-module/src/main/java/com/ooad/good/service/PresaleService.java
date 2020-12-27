@@ -11,6 +11,9 @@ import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.ooad.good.dao.PresaleDao;
 import com.ooad.good.model.bo.Presale;
+import com.ooad.good.model.bo.Shop;
+import com.ooad.good.model.bo.Sku;
+import com.ooad.good.model.bo.Spu;
 import com.ooad.good.model.po.PresaleActivityPo;
 import com.ooad.good.model.vo.presale.PresaleVo;
 import org.apache.dubbo.config.annotation.DubboReference;
@@ -28,6 +31,12 @@ public class PresaleService {
 
     @Autowired
     private PresaleDao presaleDao;
+    @Autowired
+    private ShopService shopService;
+    @Autowired
+    private SkuService skuService;
+    @Autowired
+    private SpuService spuService;
 
     @DubboReference(check = false)
     IGoodsService iGoodsService;
@@ -121,25 +130,27 @@ public class PresaleService {
     public ReturnObject addSkuPresale(Long shopId, Long id, PresaleVo presaleVo) {
 
         //1. shopId是否存在
-        ReturnObject<SimpleShopDTO> returnObject = iGoodsService.getSimpleShopByShopId(shopId);
-        SimpleShopDTO simpleShopDTO = returnObject.getData();
-
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         //2. 检查是否存在skuId
         //TODO sku state=2 则不应该拿到
-        SimpleGoodsSkuDTO simpleGoodsSkuDTO = iGoodsService.getSimpleSkuBySkuId(id).getData();
-        if(simpleGoodsSkuDTO == null){
+        Sku sku = skuService.getSkuBySkuId(id).getData();
+        if(sku == null) {
+            logger.info("sku==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
         }
         
         //3. 此sku是否在此shop中,否则无权限操作
-        if(iGoodsService.getShopIdBySkuId(id).getData()!=shopId){
-            logger.debug("此shop无权限操作此sku");
+        Long spuId=sku.getGoodsSpuId();
+        Spu spu=spuService.getSpuBySpuId(id).getData();
+        if(spu.getShopId()!=shopId){
+            logger.info("此shop无权限操作此sku");
             return new ReturnObject(ResponseCode.RESOURCE_ID_OUTSCOPE);
         }
-        return presaleDao.addSkuPresale(shopId, id, presaleVo,simpleGoodsSkuDTO,simpleShopDTO);
+        return presaleDao.addSkuPresale(shopId, id, presaleVo,sku,shop);
 
     }
 
@@ -152,12 +163,11 @@ public class PresaleService {
      * @return
      */
     public ReturnObject modifyPresaleOfSKU(Long shopId, Long id, PresaleVo presaleVo) {
-        //1. shopId是否存在
-        ReturnObject<SimpleShopDTO> returnObject = iGoodsService.getSimpleShopByShopId(shopId);
-        SimpleShopDTO simpleShopDTO = returnObject.getData();
-
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
+        }
 
         return presaleDao.modifyPresaleOfSKU(shopId,id,presaleVo);
     }
@@ -170,12 +180,11 @@ public class PresaleService {
      */
     public ReturnObject cancelPresaleOfSKU(Long shopId, Long id) {
         //1. shopId是否存在
-        ReturnObject<SimpleShopDTO> returnObject = iGoodsService.getSimpleShopByShopId(shopId);
-        SimpleShopDTO simpleShopDTO = returnObject.getData();
-
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         //2. 调用dao
         ReturnObject retObj = presaleDao.cancelPresaleOfSKU(shopId,id);
         if(retObj.getCode()!=ResponseCode.OK)
@@ -199,12 +208,11 @@ public class PresaleService {
     public ReturnObject putPresaleOnShelves(Long shopId, Long id) {
 
         //1. shopId是否存在
-        ReturnObject<SimpleShopDTO> returnObject = iGoodsService.getSimpleShopByShopId(shopId);
-        SimpleShopDTO simpleShopDTO = returnObject.getData();
-
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
+        }
         return presaleDao.putPresaleOnShelves(shopId,id);
     }
 
@@ -216,13 +224,11 @@ public class PresaleService {
      */
     public ReturnObject putPresaleOffShelves(Long shopId, Long id) {
         //1. shopId是否存在
-        ReturnObject<SimpleShopDTO> returnObject = iGoodsService.getSimpleShopByShopId(shopId);
-        SimpleShopDTO simpleShopDTO = returnObject.getData();
-
-        if(simpleShopDTO == null)
+        Shop shop = shopService.getSimpleShopByShopId(shopId).getData();
+        if(shop == null) {
+            logger.info("shop==null");
             return new ReturnObject(ResponseCode.RESOURCE_ID_NOTEXIST);
-
-
+        }
         //2. 调用dao
         ReturnObject retobj = presaleDao.putPresaleOffShelves(shopId,id);
         if(retobj.getCode()!=ResponseCode.OK)

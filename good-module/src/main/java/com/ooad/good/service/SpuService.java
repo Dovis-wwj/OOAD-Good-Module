@@ -3,12 +3,17 @@ package com.ooad.good.service;
 import cn.edu.xmu.ooad.model.VoObject;
 import cn.edu.xmu.ooad.util.ReturnObject;
 import com.ooad.good.dao.SpuDao;
+import com.ooad.good.model.bo.Shop;
 import com.ooad.good.model.bo.Spu;
+import com.ooad.good.model.po.ShopPo;
+import com.ooad.good.model.po.SpuPo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.awt.color.ICC_Profile;
 
 @Service
 public class SpuService {
@@ -84,5 +89,28 @@ public class SpuService {
     public ReturnObject removeSpuFromCategory(Long spuId,Long categoryId){
         ReturnObject<Spu>retObj=spuDao.removeSpuFromCategory(spuId,categoryId);
         return retObj;
+    }
+    /**
+     * 查看spu是否存在
+     * @param id
+     * @return
+     */
+    @Transactional
+    public ReturnObject<Spu> getSpuBySpuId(Long id) {
+        SpuPo po=spuDao.getSpuBySpuId(id);
+        Spu bo=null;
+        if(po!=null)
+            bo=new Spu(po);
+        return new ReturnObject<>(bo);
+    }
+
+    /**
+     * 查询一条spu
+     * @param id
+     * @return
+     */
+    @Transactional
+    public ReturnObject<Spu> getSpu(Long id) {
+        return spuDao.getSpu(id);
     }
 }

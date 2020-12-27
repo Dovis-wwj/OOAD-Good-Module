@@ -3,14 +3,14 @@ package com.ooad.good.service;
 import cn.edu.xmu.ooad.util.ReturnObject;
 import com.ooad.good.dao.ShopDao;
 import com.ooad.good.model.bo.Shop;
+
+import com.ooad.good.model.po.ShopPo;
 import com.ooad.good.model.vo.shop.ShopVo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 /**
  * @Author: Chaoyang Deng
@@ -37,11 +37,12 @@ public class ShopService {
      * 查询
      * @return
      */
+    /*
     public ReturnObject<List> getAllShopStates() {
         ReturnObject<List> retObj = shopDao.getAllShopStates();
 
         return retObj;
-    }
+    }*/
     /**
      * 修改任意店铺信息
      * @param id 店铺 id
@@ -51,6 +52,20 @@ public class ShopService {
     @Transactional
     public ReturnObject<Object> modifyShopInfo(Long id, ShopVo vo) {
         return shopDao.modifyShopByVo(id, vo);
+    }
+
+    /**
+     * 查看店铺是否存在
+     * @param id
+     * @return
+     */
+    @Transactional
+    public ReturnObject<Shop> getSimpleShopByShopId(Long id) {
+        ShopPo po=shopDao.getSimpleShopByShopId(id);
+        Shop bo=null;
+        if(po!=null)
+            bo=new Shop(po);
+        return new ReturnObject<>(bo);
     }
     /**
      * 删除店铺
